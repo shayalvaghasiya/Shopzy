@@ -1,24 +1,29 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: shopzy-postgres
+    restart: always
     environment:
       POSTGRES_USER: shopzy
       POSTGRES_PASSWORD: shopzy123
-      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+      POSTGRES_DB: shopzy
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shopzy"]
+      test: ["CMD-SHELL", "pg_isready -U shopzy -d shopzy"]
       interval: 10s
       timeout: 5s
       retries: 5
+
     networks:
       - shopzy-network
 
