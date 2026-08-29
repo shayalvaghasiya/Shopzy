@@ -10,25 +10,25 @@ from datetime import datetime
 class AddressCreate(BaseModel):
     """Schema for creating an address."""
 
-    type: str = Field(default="shipping", regex="^(shipping|billing)$")
+    type: str = Field(default="shipping", pattern="^(shipping|billing)$")
     street_address: str = Field(..., min_length=1, max_length=255)
     city: str = Field(..., min_length=1, max_length=100)
     state_province: str = Field(..., min_length=1, max_length=100)
     postal_code: str = Field(..., min_length=1, max_length=20)
     country: str = Field(..., min_length=1, max_length=100)
-    is_default: Optional[str] = Field(default="N", regex="^[YN]$")
+    is_default: Optional[str] = Field(default="N", pattern="^[YN]$")
 
 
 class AddressUpdate(BaseModel):
     """Schema for updating an address."""
 
-    type: Optional[str] = Field(None, regex="^(shipping|billing)$")
+    type: Optional[str] = Field(None, pattern="^(shipping|billing)$")
     street_address: Optional[str] = Field(None, min_length=1, max_length=255)
     city: Optional[str] = Field(None, min_length=1, max_length=100)
     state_province: Optional[str] = Field(None, min_length=1, max_length=100)
     postal_code: Optional[str] = Field(None, min_length=1, max_length=20)
     country: Optional[str] = Field(None, min_length=1, max_length=100)
-    is_default: Optional[str] = Field(None, regex="^[YN]$")
+    is_default: Optional[str] = Field(None, pattern="^[YN]$")
 
 
 class AddressResponse(BaseModel):

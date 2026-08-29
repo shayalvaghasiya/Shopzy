@@ -13,13 +13,13 @@ class PaymentCreate(BaseModel):
     order_id: str = Field(..., min_length=1)
     customer_id: str = Field(..., min_length=1)
     amount: float = Field(..., gt=0)
-    currency: str = Field(default="USD", regex="^[A-Z]{3}$")
+    currency: str = Field(default="USD", pattern="^[A-Z]{3}$")
 
 
 class PaymentUpdateStatus(BaseModel):
     """Schema for updating payment status."""
 
-    status: str = Field(..., regex="^(PENDING|PROCESSING|SUCCESS|FAILED|REFUNDED|CANCELLED)$")
+    status: str = Field(..., pattern="^(PENDING|PROCESSING|SUCCESS|FAILED|REFUNDED|CANCELLED)$")
 
 
 class PaymentResponse(BaseModel):

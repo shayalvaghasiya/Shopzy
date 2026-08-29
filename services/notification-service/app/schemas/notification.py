@@ -14,8 +14,8 @@ class NotificationCreate(BaseModel):
     order_id: Optional[str] = Field(None, min_length=1)
     event_type: str = Field(..., min_length=1)
     event_id: str = Field(..., min_length=1)
-    notification_type: str = Field(default="email", regex="^(email|in_app|sms)$")
-    channel: str = Field(default="email", regex="^(email|push|sms)$")
+    notification_type: str = Field(default="email", pattern="^(email|in_app|sms)$")
+    channel: str = Field(default="email", pattern="^(email|push|sms)$")
     subject: Optional[str] = None
     message: str = Field(..., min_length=1)
     recipient: str = Field(..., min_length=1)

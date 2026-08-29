@@ -31,7 +31,7 @@ class ProductUpdate(BaseModel):
     subcategory: Optional[str] = None
     brand: Optional[str] = None
     image_url: Optional[str] = None
-    status: Optional[str] = Field(None, regex="^(active|inactive|discontinued)$")
+    status: Optional[str] = Field(None, pattern="^(active|inactive|discontinued)$")
     stock_count: Optional[int] = Field(None, ge=0)
 
 
