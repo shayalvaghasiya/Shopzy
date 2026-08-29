@@ -1,564 +1,842 @@
 # Shopzy Development Guide
 
-This document provides comprehensive development instructions for the Shopzy microservices platform.
+This document provides comprehensive instructions for setting up, running, and developing the Shopzy microservices e-commerce platform.
 
-## Development Setup
+## Table of Contents
 
-### Prerequisites
+1. [Prerequisites](#prerequisites)
+2. [Quick Start - Complete Application](#quick-start---complete-application)
+3. [Running Individual Services](#running-individual-services)
+4. [Frontend Development](#frontend-development)
+5. [Testing](#testing)
+6. [Development Workflow](#development-workflow)
+7. [Debugging & Troubleshooting](#debugging--troubleshooting)
 
-- Docker & Docker Compose (for infrastructure)
-- Node.js 18+ (for frontend development)
-- Python 3.11+ (for backend service development)
-- Git
+---
 
-### Local Development Workflow
+## Prerequisites
 
-The recommended approach for development is to work in separate terminals:
+Ensure you have the following installed:
 
-#### Terminal 1: Infrastructure Services
-```bash
-# Start PostgreSQL
-psql -U shopzy -h localhost -d product_db
+- **Python 3.11+** - For backend services
+- **Node.js 18+** - For frontend
+- **PostgreSQL 15** (optional) - For production database (SQLite used for testing)
+- **Git** - For version control
+- **pip** - Python package manager
+- **npm** - Node package manager
 
-# Or run with Docker Compose
-docker-compose up -d
-```
-
-#### Terminal 2: Message Broker
-```bash
-# If using Docker Compose, start with infrastructure
-# RabbitMQ will be started by docker-compose
-```
-
-#### Terminal 3: Product Service (Reference Implementation)
-```bash
-cd services/product-service
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-export DATABASE_URL=postgresql://shopzy:shopzy@localhost/product_db
-export SERVICE_PORT=8001
-python -m app.main
-```
-
-#### Terminal 4: Frontend Development
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Individual Service Development
-
-Each service should be developed in isolation using the Product Service as a template:
+### Installation
 
 ```bash
-# Navigate to service directory
-cd services/inventory-service
+# Check Python version
+python --version  # Should be 3.11 or higher
 
-# Setup virtual environment
-python -m venv venv
-source venv/bin/activate
+# Check Node version
+node --version    # Should be 18 or higher
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment variables
-export DATABASE_URL=postgresql://shopzy:shopzy@localhost/inventory_db
-export SERVICE_PORT=8002
-
-# Run service
-python -m app.main
-```
-
-### Database Initialization
-
-The development database needs to be initialized:
-
-```bash
-# Create databases if using local PostgreSQL
-createdb product_db
-createdb inventory_db
-createdb customer_db
-createdb order_db
-createdb payment_db
-createdb notification_db
-
-# Run initialization script (if available)
-psql -U shopzy -d product_db -f scripts/init-databases.sql
-```
-
-### Service-to-Service Communication
-
-During development, services can communicate directly via HTTP:
-
-```bash
-# Test Product Service
-curl http://localhost:8001/health
-curl http://localhost:8001/products
-
-# Test Order Service depends on other services
-# Requires all services running locally
-```
-
-### Local Testing Workflow
-
-1. **Start Infrastructure**
-   ```bash
-   docker-compose up -d postgres rabbitmq
-   ```
-
-2. **Initialize Databases**
-   ```bash
-   # Run initialization script
-   docker-compose exec postgres psql -U shopzy -f scripts/init-databases.sql
-   ```
-
-3. **Start Services Sequentially**
-   ```bash
-   # Terminal 1: Product Service
-   cd services/product-service
-   source venv/bin/activate
-   export DATABASE_URL=postgresql://shopzy:shopzy@postgres:5432/product_db
-   python -m app.main
-
-   # Terminal 2: Inventory Service
-   cd services/inventory-service
-   source venv/bin/activate
-   export DATABASE_URL=postgresql://shopzy:shopzy@postgres:5432/inventory_db
-   python -m app.main
-
-   # Continue for other services...
-   ```
-
-4. **Test Services**
-   ```bash
-   # Health check
-curl http://localhost:8001/health
-curl http://localhost:8002/health
-
-   # API endpoint tests
-curl http://localhost:8000/api/products
-   ```
-
-5. **Frontend Development**
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-## Quick Start Commands
-
-### Start All Services (Docker)
-```bash
-docker-compose up -d
-```
-
-### Access Services
-- **Frontend**: http://localhost:3000
-- **API Gateway**: http://localhost:8000
-- **Product Service**: http://localhost:8001/docs
-- **Inventory Service**: http://localhost:8002/docs
-- **Customer Service**: http://localhost:8003/docs
-- **Order Service**: http://localhost:8004/docs
-- **Payment Service**: http://localhost:8005/docs
-- **Notification Service**: http://localhost:8006/docs
-
-### Test Development Setup
-```bash
-# Check if services are running
-curl http://localhost:8001/health
-
-# Test API Gateway
-curl http://localhost:8000/api/products
-
-# Test Product Service directly
-curl http://localhost:8001/products
-```
-
-## Service Development Patterns
-
-### 1. Copy Product Service Structure
-
-For each new service, use Product Service as a template:
-
-```bash
-# Copy the structure
-cp -r services/product-service services/[new-service]
-
-# Navigate to new service
-cd services/[new-service]
-
-# Adapt the following files:
-# - app/models/[model].py - Update models for your domain
-# - app/schemas/[model].py - Add Pydantic schemas
-# - app/repositories/[model]_repository.py - Implement data access
-# - app/services/[model]_service.py - Add business logic
-# - app/api/routes.py - Add API endpoints
-# - app/core/config.py - Update database URL
-# - app/main.py - Include your routes
-```
-
-### 2. Inventory Service Example
-
-```bash
-cd services/inventory-service
-
-# Adapt models for inventory management
-cat > app/models/inventory.py << 'EOF'
-# Inventory and Reservation models
-EOF
-
-# Add schemas
-cat > app/schemas/inventory.py << 'EOF'
-# InventoryCreate, InventoryUpdate, InventoryResponse schemas
-EOF
-
-# Implement repository
-cat > app/repositories/inventory_repository.py << 'EOF'
-# Inventory CRUD with reservation logic
-EOF
-
-# Add business logic
-cat > app/services/inventory_service.py << 'EOF'
-# Reservation and release operations
-EOF
-
-# Add routes
-cat > app/api/routes.py << 'EOF'
-# All inventory endpoints
-EOF
-```
-
-### 3. Order Service Special Considerations
-
-The Order Service requires additional components:
-
-```bash
-# 1. Add order state machine
-# Update app/models/order.py with OrderStatus enum
-
-# 2. Add service clients
-# Create app/clients/ directory for:
-# - ProductClient
-# - InventoryClient
-# - CustomerClient
-# - PaymentClient
-
-# 3. Add event publisher
-# Create app/events/ directory for RabbitMQ integration
-
-# 4. Implement orchestration logic
-# Add order creation, validation, and coordination logic
-```
-
-## Testing Services Locally
-
-### Unit Tests
-```bash
-cd services/product-service
-pytest tests/unit/
-```
-
-### Integration Tests
-```bash
-cd services/product-service
-pytest tests/integration/
-```
-
-### With Coverage
-```bash
-cd services/product-service
-pytest --cov=app tests/
-```
-
-### Test Development Workflow
-
-1. **Write Unit Tests First**
-   ```python
-   # test_repository.py - Test data access
-   # test_service.py - Test business logic
-   ```
-
-2. **Add Integration Tests**
-   ```python
-   # test_integration.py - Test service + database
-   ```
-
-3. **Test API Endpoints**
-   ```python
-   # test_routes.py - Test FastAPI endpoints
-   ```
-
-## Development Best Practices
-
-### 1. Use Environment Variables
-
-```python
-# In app/core/config.py
-DATABASE_URL: str = os.getenv("DATABASE_URL")
-SERVICE_PORT: int = int(os.getenv("SERVICE_PORT", 8001))
-```
-
-### 2. Follow Clean Architecture
-
-```
-service/
-├── app/
-│   ├── api/           # API routes (outermost layer)
-│   ├── services/      # Business logic
-│   ├── repositories/  # Data access
-│   ├── models/        # Database models (innermost)
-│   └── core/          # Configuration and dependencies
-```
-
-### 3. Error Handling
-
-```python
-# Standardized error responses
-from shared.utils import ResponseFormat, ErrorCode
-
-@app.get("/products")
-async def get_products():
-    try:
-        products = await product_service.get_all_products()
-        return ResponseFormat.success(products)
-    except Exception as e:
-        return ResponseFormat.error(ErrorCode.INTERNAL_ERROR, str(e))
-```
-
-### 4. Logging
-
-```python
-# Use structured logging
-import logging
-from shared.utils import StructuredLogger
-
-logger = StructuredLogger(__name__)
-
-@app.post("/products")
-async def create_product(product_data: ProductCreate):
-    logger.info("Creating product", sku=product_data.sku)
-    try:
-        product = await product_service.create_product(product_data)
-        logger.info("Product created successfully", product_id=product.id)
-        return ResponseFormat.success(product)
-    except Exception as e:
-        logger.error("Failed to create product", error=str(e))
-        return ResponseFormat.error(ErrorCode.VALIDATION_ERROR, str(e))
-```
-
-### 5. Service Communication
-
-```python
-# Service clients for inter-service communication
-class ProductClient:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.session = aiohttp.ClientSession()
-
-    async def get_product(self, product_id: str):
-        async with self.session.get(f"{self.base_url}/products/{product_id}") as response:
-            return await response.json()
-```
-
-## Debugging Tips
-
-### Common Issues
-
-1. **Database Connection Errors**
-   ```bash
-   # Check PostgreSQL is running
-   psql -U shopzy -h localhost -c "SELECT 1"
-
-   # Verify database exists
-   psql -U shopzy -lqt | cut -d \| -f 1 | grep product_db
-   ```
-
-2. **Service Startup Issues**
-   ```bash
-   # Check if port is available
-   lsof -i :8001
-
-   # Kill process using port
-   kill -9 $(lsof -t -i :8001)
-   ```
-
-3. **Environment Variables**
-   ```bash
-   # Check all environment variables
-   env | grep PRODUCT
-
-   # Or in Python
-   import os
-   for key, value in os.environ.items():
-       if 'PRODUCT' in key:
-           print(f"{key}={value}")
-   ```
-
-### Development Scripts
-
-Create a `scripts/dev.sh` file:
-
-```bash
-#!/bin/bash
-
-# Start all services for development
-.
-cd services/product-service
-source venv/bin/activate
-python -m app.main &
-
-# Wait for service to start
-sleep 3
-
-# Run tests
-pytest --cov=app
-
-# Stop all background processes
-kill %1
-```
-
-## Performance Optimization
-
-### 1. Database Connection Pooling
-```python
-# In app/core/dependencies.py
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_size=20,
-    max_overflow=10,
-    pool_recycle=3600
-)
-```
-
-### 2. Asynchronous Operations
-```python
-# Use async/await for I/O operations
-async def process_order(order_data: OrderCreate):
-    # Process asynchronously
-    async with aiohttp.ClientSession() as session:
-        # Make concurrent calls to multiple services
-        tasks = [
-            session.get(f"{PRODUCT_SERVICE_URL}/products/{item['product_id']}"),
-            session.get(f"{INVENTORY_SERVICE_URL}/inventory/check"),
-            # ... other service calls
-        ]
-        responses = await asyncio.gather(*tasks)
-        # Process all responses
-```
-
-## Migration Guide
-
-When upgrading from one version to another:
-
-1. **Backup Databases**
-   ```bash
-   pg_dump -U shopzy product_db > product_db_backup.sql
-   pg_dump -U shopzy inventory_db > inventory_db_backup.sql
-   # ... backup all databases
-   ```
-
-2. **Update Services**
-   ```bash
-   # Update each service to new version
-   cd services/product-service
-   git checkout v2.0.0
-   pip install -r requirements.txt
-   ```
-
-3. **Run Migrations**
-   ```bash
-   # Alembic migrations
-   alembic upgrade head
-   ```
-
-4. **Test Integration**
-   ```bash
-   # Test all services end-to-end
-   curl http://localhost:8000/api/products
-   ```
-
-## Support
-
-### Common Development Questions
-
-**Q: How do I run all services locally?**
-A: Use docker-compose or start them sequentially in separate terminals as shown above.
-
-**Q: How do I debug service-to-service communication?**
-A: Use structured logging and check that service URLs are correctly configured in environment variables.
-
-**Q: How do I handle database migrations?**
-A: Use Alembic for database migrations. Run `alembic upgrade head` to apply all migrations.
-
-**Q: How do I test the complete flow?**
-A: Start all services, then use tools like Postman or curl to test API endpoints.
-
-### Getting Help
-
-1. **Check Documentation**
-   - README.md - Main project overview
-   - IMPLEMENTATION_GUIDE.md - Detailed development guide
-   - docs/architecture.md - Architecture details
-
-2. **Study Reference Implementation**
-   - Product Service in services/product-service/
-   - Shared utilities in shared/
-
-3. **Join Discussions**
-   - GitHub issues for bug reports
-   - Discord/Slack for real-time help (if available)
-
-## Development Checklist
-
-### Before Starting Development
-- [ ] All databases created and initialized
-- [ ] Docker Compose installed (optional)
-- [ ] Virtual environments set up for all services
-- [ ] Environment variables configured
-
-### During Development
-- [ ] Follow clean architecture principles
-- [ ] Write unit tests for all business logic
-- [ ] Use structured logging
-- [ ] Follow API contract standards
-- [ ] Test service-to-service communication
-- [ ] Keep services independent and loosely coupled
-
-### Before Deployment
-- [ ] All tests passing
-- [ ] Docker containers built
-- [ ] Environment variables set for production
-- [ ] Health checks implemented and working
-- [ ] Monitoring and logging configured
-
-## Project Structure for Development
-
-```
-shopzy/
-├── services/
-│   ├── api-gateway/         # Request routing and CORS
-│   ├── product-service/     # Product catalog (complete)
-│   ├── inventory-service/   # Stock management (in progress)
-│   ├── customer-service/    # Customer profiles (in progress)
-│   ├── order-service/       # Order orchestration (in progress)
-│   ├── payment-service/     # Payment processing (in progress)
-│   └── notification-service/# Event-driven notifications (in progress)
-│
-├── shared/                  # Shared utilities and contracts
-│   ├── event_schemas.py     # Event definitions
-│   ├── utils.py            # Response formatting and logging
-│   └── database.py         # Database utilities
-│
-├── docs/                    # Architecture and development docs
-│   └── architecture.md
-│
-└── README.md                # Quick start and overview
+# Check npm version
+npm --version
 ```
 
 ---
 
-**Development Guide maintained as living document**
+## Quick Start - Complete Application
 
-For the most current development information, refer to this guide and the implementation guide for detailed step-by-step instructions.
+This section guides you through running the entire Shopzy platform locally.
+
+### Step 1: Clone and Setup
+
+```bash
+# Navigate to project directory
+cd /path/to/shopzy
+
+# Create a virtual environment for each service (optional but recommended)
+python -m venv venv_services
+source venv_services/bin/activate  # On Windows: venv_services\Scripts\activate
+```
+
+### Step 2: Start Backend Services
+
+Open 7 separate terminal windows/tabs for each service. In each terminal:
+
+#### Terminal 1: Product Service (Port 8001)
+```bash
+cd services/product-service
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run service
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```
+
+#### Terminal 2: Customer Service (Port 8002)
+```bash
+cd services/customer-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+```
+
+#### Terminal 3: Inventory Service (Port 8003)
+```bash
+cd services/inventory-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+```
+
+#### Terminal 4: Order Service (Port 8004)
+```bash
+cd services/order-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+```
+
+#### Terminal 5: Payment Service (Port 8005)
+```bash
+cd services/payment-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+```
+
+#### Terminal 6: Notification Service (Port 8006)
+```bash
+cd services/notification-service
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+```
+
+#### Terminal 7: API Gateway (Port 8000)
+```bash
+cd services/api-gateway
+
+python -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Step 3: Start Frontend
+
+Open a new terminal:
+
+```bash
+cd frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server
+npm run dev
+
+# Frontend will be available at http://localhost:5173
+```
+
+### Step 4: Verify All Services Running
+
+Check that all services are accessible:
+
+```bash
+# Product Service
+curl http://localhost:8001/docs
+
+# Customer Service
+curl http://localhost:8002/docs
+
+# Inventory Service
+curl http://localhost:8003/docs
+
+# Order Service
+curl http://localhost:8004/docs
+
+# Payment Service
+curl http://localhost:8005/docs
+
+# Notification Service
+curl http://localhost:8006/docs
+
+# API Gateway
+curl http://localhost:8000/docs
+
+# Frontend
+open http://localhost:5173
+```
+
+### Step 5: Access the Application
+
+- **Frontend**: http://localhost:5173
+- **API Gateway**: http://localhost:8000
+- **Individual Service Docs**: http://localhost:800X/docs (where X is the service port digit)
+
+---
+
+## Running Individual Services
+
+This section explains how to set up and run each service independently for development/testing.
+
+### Product Service
+
+**Purpose**: Manages product catalog, search, and filtering
+
+```bash
+cd services/product-service
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+# API Documentation: http://localhost:8001/docs
+# Health Check: http://localhost:8001/health
+
+# Test endpoint
+curl http://localhost:8001/products?page=1&page_size=10
+```
+
+### Customer Service
+
+**Purpose**: Manages customer profiles, addresses, and personal information
+
+```bash
+cd services/customer-service
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+# API Documentation: http://localhost:8002/docs
+# Health Check: http://localhost:8002/health
+
+# Test endpoint
+curl http://localhost:8002/customers?page=1&page_size=10
+```
+
+### Inventory Service
+
+**Purpose**: Manages stock levels and reservations
+
+```bash
+cd services/inventory-service
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+# API Documentation: http://localhost:8003/docs
+# Health Check: http://localhost:8003/health
+
+# Test endpoint
+curl http://localhost:8003/inventory?page=1&page_size=10
+```
+
+### Order Service
+
+**Purpose**: Handles order creation, tracking, and management
+
+```bash
+cd services/order-service
+
+# Setup
+python -m venv venv
+source venv/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+
+# API Documentation: http://localhost:8004/docs
+# Health Check: http://localhost:8004/health
+
+# Test endpoint
+curl http://localhost:8004/orders?page=1&page_size=10
+```
+
+### Payment Service
+
+**Purpose**: Processes payments and refunds
+
+```bash
+cd services/payment-service
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+
+# API Documentation: http://localhost:8005/docs
+# Health Check: http://localhost:8005/health
+
+# Test endpoint
+curl http://localhost:8005/payments?page=1&page_size=10
+```
+
+### Notification Service
+
+**Purpose**: Sends notifications and manages notification preferences
+
+```bash
+cd services/notification-service
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+
+# API Documentation: http://localhost:8006/docs
+# Health Check: http://localhost:8006/health
+
+# Test endpoint
+curl http://localhost:8006/notifications?page=1&page_size=10
+```
+
+### API Gateway
+
+**Purpose**: Routes requests to appropriate services
+
+```bash
+cd services/api-gateway
+
+# Setup
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# API Documentation: http://localhost:8000/docs
+# Health Check: http://localhost:8000/health
+```
+
+---
+
+## Frontend Development
+
+### Initial Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Copy environment template (if exists)
+cp .env.example .env.local
+
+# Edit .env.local to match your setup
+# VITE_API_URL=http://localhost:8000
+```
+
+### Development Server
+
+```bash
+# Start development server with hot reload
+npm run dev
+
+# Frontend will be available at http://localhost:5173
+```
+
+### Building for Production
+
+```bash
+# Build optimized production bundle
+npm run build
+
+# Output is in frontend/dist/
+
+# Preview production build locally
+npm run preview
+```
+
+### Frontend Structure
+
+```
+frontend/
+├── src/
+│   ├── pages/
+│   │   ├── Home.tsx
+│   │   ├── Products.tsx
+│   │   ├── ProductDetail.tsx
+│   │   ├── Cart.tsx
+│   │   ├── Checkout.tsx
+│   │   ├── OrderConfirmation.tsx
+│   │   ├── MyOrders.tsx
+│   │   └── OrderDetail.tsx
+│   ├── components/
+│   │   └── Layout.tsx
+│   ├── App.tsx
+│   ├── api.ts
+│   ├── store.ts
+│   └── main.tsx
+├── package.json
+└── vite.config.ts
+```
+
+### Frontend Features
+
+- **Home Page**: Landing page with featured products
+- **Products Page**: Browse all products with filtering and search
+- **Product Detail**: View product details and add to cart
+- **Cart**: Manage shopping cart items
+- **Checkout**: Complete purchase with shipping and payment info
+- **Order Confirmation**: Success confirmation after purchase
+- **My Orders**: View order history and tracking
+- **Order Detail**: View detailed order information with status timeline
+
+---
+
+## Testing
+
+### Running Tests for Individual Services
+
+Each service includes comprehensive test suites. Run tests using pytest:
+
+#### Product Service Tests (33 tests)
+
+```bash
+cd services/product-service
+
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_api.py -v
+
+# Run with coverage
+pytest tests/ --cov=app --cov-report=html
+
+# Run specific test
+pytest tests/test_api.py::TestProductAPI::test_create_product -v
+```
+
+#### Customer Service Tests (7 tests)
+
+```bash
+cd services/customer-service
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+#### Inventory Service Tests (7 tests)
+
+```bash
+cd services/inventory-service
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+#### Order Service Tests (9 tests)
+
+```bash
+cd services/order-service
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+#### Payment Service Tests (7 tests)
+
+```bash
+cd services/payment-service
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+#### Notification Service Tests (8 tests)
+
+```bash
+cd services/notification-service
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+#### API Gateway Tests (10 tests)
+
+```bash
+cd services/api-gateway
+
+pytest tests/ -v
+pytest tests/test_api.py -v
+```
+
+### Running All Tests
+
+Create a script to run all tests:
+
+```bash
+#!/bin/bash
+# run_all_tests.sh
+
+echo "Running all service tests..."
+
+for service in services/*/; do
+    if [ -d "$service/tests" ]; then
+        echo "Testing $(basename $service)..."
+        cd "$service"
+        pytest tests/ -v
+        cd - > /dev/null
+    fi
+done
+
+echo "All tests completed!"
+```
+
+Run the script:
+```bash
+chmod +x run_all_tests.sh
+./run_all_tests.sh
+```
+
+### Test Database
+
+Tests use SQLite in-memory databases for isolation:
+
+```python
+# conftest.py automatically creates and destroys test databases
+# No external database needed for testing
+```
+
+---
+
+## Development Workflow
+
+### Adding a New Feature
+
+#### Backend Feature
+
+1. **Create/Update Model**
+   ```python
+   # services/[service]/app/models/[model].py
+   class NewModel(Base):
+       __tablename__ = "new_models"
+       id = Column(UUID, primary_key=True, default=uuid4)
+       # Add fields...
+   ```
+
+2. **Create Schema**
+   ```python
+   # services/[service]/app/schemas/[model].py
+   class NewModelCreate(BaseModel):
+       # Define input fields
+       pass
+   ```
+
+3. **Implement Repository**
+   ```python
+   # services/[service]/app/repositories/[model]_repository.py
+   class NewModelRepository:
+       def create(self, db: Session, data: NewModelCreate):
+           # Implement CRUD
+           pass
+   ```
+
+4. **Add Service Logic**
+   ```python
+   # services/[service]/app/services/[model]_service.py
+   class NewModelService:
+       def __init__(self, repository: NewModelRepository):
+           self.repository = repository
+       
+       def create(self, data: NewModelCreate):
+           # Business logic
+           pass
+   ```
+
+5. **Add API Routes**
+   ```python
+   # services/[service]/app/api/routes.py
+   @router.post("/new-models")
+   async def create_new_model(data: NewModelCreate, db: Session = Depends(get_db)):
+       service = NewModelService(repository)
+       return await service.create(data)
+   ```
+
+6. **Write Tests**
+   ```python
+   # services/[service]/tests/test_api.py
+   def test_create_new_model(self, client, data):
+       response = client.post("/new-models", json=data)
+       assert response.status_code == 201
+   ```
+
+#### Frontend Feature
+
+1. **Create Page Component**
+   ```tsx
+   // frontend/src/pages/NewPage.tsx
+   export default function NewPage() {
+       return <div>New Page</div>
+   }
+   ```
+
+2. **Add Route**
+   ```tsx
+   // frontend/src/App.tsx
+   <Route path="/new-page" element={<NewPage />} />
+   ```
+
+3. **Add Navigation Link**
+   ```tsx
+   // frontend/src/components/Layout.tsx
+   <Link to="/new-page">New Page</Link>
+   ```
+
+4. **Integrate API**
+   ```tsx
+   // Use apiClient to fetch data
+   const response = await apiClient.getNewData()
+   ```
+
+---
+
+## Debugging & Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. Service Port Already in Use
+
+```bash
+# Check what's using the port
+lsof -i :8001
+
+# Kill the process
+kill -9 <PID>
+
+# Or use a different port
+python -m uvicorn app.main:app --port 8010
+```
+
+#### 2. Database Connection Error
+
+```bash
+# Check if service can connect
+curl http://localhost:8001/health
+
+# Check environment variables
+echo $DATABASE_URL
+
+# Verify database exists (if using PostgreSQL)
+psql -U shopzy -h localhost -c "SELECT 1"
+```
+
+#### 3. Virtual Environment Issues
+
+```bash
+# Recreate virtual environment
+rm -rf venv
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 4. Frontend Won't Start
+
+```bash
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
+
+#### 5. API Gateway Not Routing Correctly
+
+```bash
+# Test direct service access
+curl http://localhost:8001/health
+
+# Test through gateway
+curl http://localhost:8000/health
+
+# Check if service URLs are correct in API Gateway config
+```
+
+### Debugging Tips
+
+#### Python Services
+
+```python
+# Add debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+@app.get("/debug")
+async def debug():
+    logger.debug("Debug message")
+    return {"status": "ok"}
+
+# Use debugger
+import pdb; pdb.set_trace()
+```
+
+#### Frontend
+
+```typescript
+// Console logging
+console.log("State:", state)
+console.error("Error:", error)
+
+// VS Code debugger configuration (.vscode/launch.json)
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend"
+    }
+  ]
+}
+```
+
+### Performance Issues
+
+#### Slow API Responses
+
+```bash
+# Check service logs for errors
+# Monitor database queries
+# Use curl with timing
+curl -w "@-" -o /dev/null -s \
+  "http://localhost:8001/products" << 'EOF'
+    time_namelookup:  %{time_namelookup}\n
+    time_connect:     %{time_connect}\n
+    time_appconnect:  %{time_appconnect}\n
+    time_pretransfer: %{time_pretransfer}\n
+    time_redirect:    %{time_redirect}\n
+    time_starttransfer: %{time_starttransfer}\n
+    ------\n
+    time_total:       %{time_total}\n
+EOF
+```
+
+#### Memory Usage
+
+```bash
+# Monitor Python service memory
+watch -n 1 'ps aux | grep python'
+
+# Use memory profiler
+pip install memory-profiler
+python -m memory_profiler services/product-service/app/main.py
+```
+
+---
+
+## Environment Variables
+
+### Backend Services
+
+```bash
+# Common for all services
+DATABASE_URL=sqlite:///./test.db          # For testing
+SERVICE_PORT=8001                         # Service port
+
+# Optional
+DEBUG=True                                # Enable debug mode
+LOG_LEVEL=INFO                           # Logging level
+```
+
+### Frontend
+
+```bash
+# .env.local
+VITE_API_URL=http://localhost:8000       # API Gateway URL
+```
+
+---
+
+## Summary
+
+### Quick Commands Reference
+
+```bash
+# Run complete application (in different terminals)
+Terminal 1: cd services/product-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8001 --reload
+
+Terminal 2: cd services/customer-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8002 --reload
+
+Terminal 3: cd services/inventory-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8003 --reload
+
+Terminal 4: cd services/order-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8004 --reload
+
+Terminal 5: cd services/payment-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8005 --reload
+
+Terminal 6: cd services/notification-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8006 --reload
+
+Terminal 7: cd services/api-gateway && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8000 --reload
+
+Terminal 8: cd frontend && npm install && npm run dev
+```
+
+### Service Ports
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| API Gateway | 8000 | Main entry point |
+| Product Service | 8001 | Product management |
+| Customer Service | 8002 | Customer management |
+| Inventory Service | 8003 | Stock management |
+| Order Service | 8004 | Order processing |
+| Payment Service | 8005 | Payment handling |
+| Notification Service | 8006 | Notifications |
+| Frontend | 5173 | React application |
+
+---
+
+**Last Updated**: August 29, 2026
+
+For more information, see README.md for project overview and architecture details.

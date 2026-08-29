@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+.pylintrc
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+test.db
+*.db
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.npm
+dist/
+build/
+
+# Frontend Build
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.*.local
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+logs/
+log/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+mysql_data/
+
+# API Gateway
+services/api-gateway/.env
+services/api-gateway/__pycache__/
+
+# Services
+services/*/venv/
+services/*/.env
+services/*/__pycache__/
+services/*/build/
+services/*/dist/
+services/*/*.egg-info/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Miscellaneous
+*.bak
+*.tmp
+.cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE Settings
+.vscode/settings.json
+.vscode/launch.json
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Lock files (optional - uncomment if you want to version them)
+# package-lock.json
+# yarn.lock
