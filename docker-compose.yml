@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: shopzy-postgres
+    environment:
+      POSTGRES_USER: shopzy
+      POSTGRES_PASSWORD: shopzy123
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopzy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shopzy-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: shopzy-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      SERVICE_PORT: 8000
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Product Service
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: shopzy-product-service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/product_db
+      SERVICE_PORT: 8001
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Customer Service
+  customer-service:
+    build:
+      context: ./services/customer-service
+      dockerfile: Dockerfile
+    container_name: shopzy-customer-service
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/customer_db
+      SERVICE_PORT: 8002
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+  # Inventory Service
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: shopzy-inventory-service
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/inventory_db
+      SERVICE_PORT: 8003
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+
+  # Order Service
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: shopzy-order-service
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/order_db
+      SERVICE_PORT: 8004
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: shopzy-payment-service
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/payment_db
+      SERVICE_PORT: 8005
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: shopzy-notification-service
+    ports:
+      - "8006:8006"
+    environment:
+      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/notification_db
+      SERVICE_PORT: 8006
+      PYTHONUNBUFFERED: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - shopzy-network
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shopzy-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      NODE_ENV: development
+    depends_on:
+      - api-gateway
+    networks:
+      - shopzy-network
+    command: npm run dev
+
+networks:
+  shopzy-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
