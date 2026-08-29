@@ -1,11 +1,11 @@
 # Shopzy Development Guide
 
-This document provides comprehensive instructions for setting up, running, and developing the Shopzy microservices e-commerce platform.
+This document provides comprehensive instructions for running the Shopzy microservices e-commerce platform both as a complete application and individual services.
 
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Quick Start - Complete Application](#quick-start---complete-application)
+2. [Quick Start - Docker Compose (Complete Application)](#quick-start---docker-compose-complete-application)
 3. [Running Individual Services](#running-individual-services)
 4. [Frontend Development](#frontend-development)
 5. [Testing](#testing)
@@ -16,50 +16,170 @@ This document provides comprehensive instructions for setting up, running, and d
 
 ## Prerequisites
 
-Ensure you have the following installed:
+### For Docker Compose (Recommended for Complete Application)
 
-- **Python 3.11+** - For backend services
-- **Node.js 18+** - For frontend
-- **PostgreSQL 15** (optional) - For production database (SQLite used for testing)
-- **Git** - For version control
-- **pip** - Python package manager
-- **npm** - Node package manager
+- Docker 20.10+
+- Docker Compose 2.0+
+- 8GB+ RAM available
+- Ports 5173, 8000-8006, 5432 available
 
-### Installation
-
+Verify installation:
 ```bash
-# Check Python version
-python --version  # Should be 3.11 or higher
+docker --version
+docker-compose --version
+```
 
-# Check Node version
-node --version    # Should be 18 or higher
+### For Local Development (Individual Services)
 
-# Check npm version
+- Python 3.11+
+- Node.js 18+
+- npm or yarn
+- PostgreSQL 15 (optional, or use Docker)
+- Git
+
+Verify installation:
+```bash
+python --version
+node --version
 npm --version
 ```
 
 ---
 
-## Quick Start - Complete Application
+## Quick Start - Docker Compose (Complete Application)
 
-This section guides you through running the entire Shopzy platform locally.
+### Method 1: One Command (Recommended)
 
-### Step 1: Clone and Setup
+Start all 8 services with a single command:
 
 ```bash
-# Navigate to project directory
-cd /path/to/shopzy
-
-# Create a virtual environment for each service (optional but recommended)
-python -m venv venv_services
-source venv_services/bin/activate  # On Windows: venv_services\Scripts\activate
+docker-compose up --build
 ```
 
-### Step 2: Start Backend Services
+This will:
+- ✅ Create PostgreSQL database with auto-initialization
+- ✅ Build all service Docker images
+- ✅ Start all 7 microservices
+- ✅ Start React frontend
+- ✅ Initialize all databases
 
-Open 7 separate terminal windows/tabs for each service. In each terminal:
+### Access Services
 
-#### Terminal 1: Product Service (Port 8001)
+After all containers start successfully:
+
+**Frontend:**
+```
+http://localhost:5173
+```
+
+**API Documentation (Swagger):**
+```
+http://localhost:8000/docs           (API Gateway)
+http://localhost:8001/docs           (Product Service)
+http://localhost:8002/docs           (Customer Service)
+http://localhost:8003/docs           (Inventory Service)
+http://localhost:8004/docs           (Order Service)
+http://localhost:8005/docs           (Payment Service)
+http://localhost:8006/docs           (Notification Service)
+```
+
+**Database:**
+```
+Host: localhost:5432
+User: shopzy
+Password: shopzy123
+```
+
+### Common Docker Commands
+
+```bash
+# Start in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f product-service
+
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
+
+# Restart all services
+docker-compose restart
+
+# Restart specific service
+docker-compose restart product-service
+
+# Check status
+docker-compose ps
+```
+
+---
+
+## Running Individual Services
+
+### Prerequisites for Local Development
+
+Before running individual services, install the base dependencies:
+
+```bash
+# Create virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Or use individual venvs for each service
+cd services/product-service
+python -m venv venv
+source venv/bin/activate
+```
+
+### Database Setup (One Time)
+
+For local development without Docker:
+
+```bash
+# Install PostgreSQL (if not already installed)
+# macOS:
+brew install postgresql@15
+
+# Ubuntu/Debian:
+sudo apt-get install postgresql postgresql-contrib
+
+# Start PostgreSQL
+sudo systemctl start postgresql
+
+# Create databases
+createdb -U postgres product_db
+createdb -U postgres customer_db
+createdb -U postgres inventory_db
+createdb -U postgres order_db
+createdb -U postgres payment_db
+createdb -U postgres notification_db
+```
+
+Or use Docker for just PostgreSQL:
+
+```bash
+docker run -d \
+  --name shopzy-postgres \
+  -e POSTGRES_USER=shopzy \
+  -e POSTGRES_PASSWORD=shopzy123 \
+  -p 5432:5432 \
+  postgres:15-alpine
+```
+
+### Product Service
+
+**Purpose:** Manages product catalog, search, and filtering
+
+**Port:** 8001
+
+**Setup & Run:**
+
 ```bash
 cd services/product-service
 
@@ -70,289 +190,251 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Set environment variables
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/product_db"
+export SERVICE_PORT=8001
+
 # Run service
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-#### Terminal 2: Customer Service (Port 8002)
-```bash
-cd services/customer-service
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
-```
-
-#### Terminal 3: Inventory Service (Port 8003)
-```bash
-cd services/inventory-service
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
-```
-
-#### Terminal 4: Order Service (Port 8004)
-```bash
-cd services/order-service
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
-```
-
-#### Terminal 5: Payment Service (Port 8005)
-```bash
-cd services/payment-service
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
-```
-
-#### Terminal 6: Notification Service (Port 8006)
-```bash
-cd services/notification-service
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
-```
-
-#### Terminal 7: API Gateway (Port 8000)
-```bash
-cd services/api-gateway
-
-python -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Step 3: Start Frontend
-
-Open a new terminal:
-
-```bash
-cd frontend
-
-# Install dependencies (first time only)
-npm install
-
-# Start development server
-npm run dev
-
-# Frontend will be available at http://localhost:5173
-```
-
-### Step 4: Verify All Services Running
-
-Check that all services are accessible:
-
-```bash
-# Product Service
-curl http://localhost:8001/docs
-
-# Customer Service
-curl http://localhost:8002/docs
-
-# Inventory Service
-curl http://localhost:8003/docs
-
-# Order Service
-curl http://localhost:8004/docs
-
-# Payment Service
-curl http://localhost:8005/docs
-
-# Notification Service
-curl http://localhost:8006/docs
-
-# API Gateway
-curl http://localhost:8000/docs
-
-# Frontend
-open http://localhost:5173
-```
-
-### Step 5: Access the Application
-
-- **Frontend**: http://localhost:5173
-- **API Gateway**: http://localhost:8000
-- **Individual Service Docs**: http://localhost:800X/docs (where X is the service port digit)
+**Access:**
+- API Documentation: http://localhost:8001/docs
+- Health Check: http://localhost:8001/health
 
 ---
 
-## Running Individual Services
-
-This section explains how to set up and run each service independently for development/testing.
-
-### Product Service
-
-**Purpose**: Manages product catalog, search, and filtering
-
-```bash
-cd services/product-service
-
-# Setup
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-
-# API Documentation: http://localhost:8001/docs
-# Health Check: http://localhost:8001/health
-
-# Test endpoint
-curl http://localhost:8001/products?page=1&page_size=10
-```
-
 ### Customer Service
 
-**Purpose**: Manages customer profiles, addresses, and personal information
+**Purpose:** Manages customer profiles, addresses, and personal information
+
+**Port:** 8002
+
+**Setup & Run:**
 
 ```bash
 cd services/customer-service
 
-# Setup
 python -m venv venv
 source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/customer_db"
+export SERVICE_PORT=8002
+
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
-
-# API Documentation: http://localhost:8002/docs
-# Health Check: http://localhost:8002/health
-
-# Test endpoint
-curl http://localhost:8002/customers?page=1&page_size=10
 ```
+
+**Access:**
+- API Documentation: http://localhost:8002/docs
+- Health Check: http://localhost:8002/health
+
+---
 
 ### Inventory Service
 
-**Purpose**: Manages stock levels and reservations
+**Purpose:** Manages stock levels, availability checks, and reservations
+
+**Port:** 8003
+
+**Setup & Run:**
 
 ```bash
 cd services/inventory-service
 
-# Setup
 python -m venv venv
 source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/inventory_db"
+export SERVICE_PORT=8003
+
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
-
-# API Documentation: http://localhost:8003/docs
-# Health Check: http://localhost:8003/health
-
-# Test endpoint
-curl http://localhost:8003/inventory?page=1&page_size=10
 ```
+
+**Access:**
+- API Documentation: http://localhost:8003/docs
+- Health Check: http://localhost:8003/health
+
+---
 
 ### Order Service
 
-**Purpose**: Handles order creation, tracking, and management
+**Purpose:** Handles order creation, tracking, and management
+
+**Port:** 8004
+
+**Setup & Run:**
 
 ```bash
 cd services/order-service
 
-# Setup
 python -m venv venv
-source venv/activate
+source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/order_db"
+export SERVICE_PORT=8004
+
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
-
-# API Documentation: http://localhost:8004/docs
-# Health Check: http://localhost:8004/health
-
-# Test endpoint
-curl http://localhost:8004/orders?page=1&page_size=10
 ```
+
+**Access:**
+- API Documentation: http://localhost:8004/docs
+- Health Check: http://localhost:8004/health
+
+---
 
 ### Payment Service
 
-**Purpose**: Processes payments and refunds
+**Purpose:** Processes payments, refunds, and payment transactions
+
+**Port:** 8005
+
+**Setup & Run:**
 
 ```bash
 cd services/payment-service
 
-# Setup
 python -m venv venv
 source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/payment_db"
+export SERVICE_PORT=8005
+
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
-
-# API Documentation: http://localhost:8005/docs
-# Health Check: http://localhost:8005/health
-
-# Test endpoint
-curl http://localhost:8005/payments?page=1&page_size=10
 ```
+
+**Access:**
+- API Documentation: http://localhost:8005/docs
+- Health Check: http://localhost:8005/health
+
+---
 
 ### Notification Service
 
-**Purpose**: Sends notifications and manages notification preferences
+**Purpose:** Sends notifications and manages notification preferences
+
+**Port:** 8006
+
+**Setup & Run:**
 
 ```bash
 cd services/notification-service
 
-# Setup
 python -m venv venv
 source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/notification_db"
+export SERVICE_PORT=8006
+
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
-
-# API Documentation: http://localhost:8006/docs
-# Health Check: http://localhost:8006/health
-
-# Test endpoint
-curl http://localhost:8006/notifications?page=1&page_size=10
 ```
+
+**Access:**
+- API Documentation: http://localhost:8006/docs
+- Health Check: http://localhost:8006/health
+
+---
 
 ### API Gateway
 
-**Purpose**: Routes requests to appropriate services
+**Purpose:** Routes requests to appropriate services and provides unified API endpoint
+
+**Port:** 8000
+
+**Setup & Run:**
 
 ```bash
 cd services/api-gateway
 
-# Setup
 python -m venv venv
 source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Run
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+export SERVICE_PORT=8000
 
-# API Documentation: http://localhost:8000/docs
-# Health Check: http://localhost:8000/health
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**Access:**
+- API Documentation: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
+
+---
+
+### Running All Services Locally (Without Docker)
+
+Open 8 separate terminal windows/tabs and run each service:
+
+**Terminal 1 - Product Service:**
+```bash
+cd services/product-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/product_db"
+python -m uvicorn app.main:app --port 8001 --reload
+```
+
+**Terminal 2 - Customer Service:**
+```bash
+cd services/customer-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/customer_db"
+python -m uvicorn app.main:app --port 8002 --reload
+```
+
+**Terminal 3 - Inventory Service:**
+```bash
+cd services/inventory-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/inventory_db"
+python -m uvicorn app.main:app --port 8003 --reload
+```
+
+**Terminal 4 - Order Service:**
+```bash
+cd services/order-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/order_db"
+python -m uvicorn app.main:app --port 8004 --reload
+```
+
+**Terminal 5 - Payment Service:**
+```bash
+cd services/payment-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/payment_db"
+python -m uvicorn app.main:app --port 8005 --reload
+```
+
+**Terminal 6 - Notification Service:**
+```bash
+cd services/notification-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/notification_db"
+python -m uvicorn app.main:app --port 8006 --reload
+```
+
+**Terminal 7 - API Gateway:**
+```bash
+cd services/api-gateway
+source venv/bin/activate
+python -m uvicorn app.main:app --port 8000 --reload
+```
+
+**Terminal 8 - Frontend:**
+```bash
+cd frontend
+npm install  # First time only
+npm run dev
 ```
 
 ---
@@ -370,7 +452,7 @@ npm install
 # Copy environment template (if exists)
 cp .env.example .env.local
 
-# Edit .env.local to match your setup
+# Edit .env.local
 # VITE_API_URL=http://localhost:8000
 ```
 
@@ -419,24 +501,13 @@ frontend/
 └── vite.config.ts
 ```
 
-### Frontend Features
-
-- **Home Page**: Landing page with featured products
-- **Products Page**: Browse all products with filtering and search
-- **Product Detail**: View product details and add to cart
-- **Cart**: Manage shopping cart items
-- **Checkout**: Complete purchase with shipping and payment info
-- **Order Confirmation**: Success confirmation after purchase
-- **My Orders**: View order history and tracking
-- **Order Detail**: View detailed order information with status timeline
-
 ---
 
 ## Testing
 
 ### Running Tests for Individual Services
 
-Each service includes comprehensive test suites. Run tests using pytest:
+Each service includes comprehensive test suites using pytest and SQLite in-memory databases.
 
 #### Product Service Tests (33 tests)
 
@@ -510,41 +581,27 @@ pytest tests/ -v
 pytest tests/test_api.py -v
 ```
 
-### Running All Tests
-
-Create a script to run all tests:
+### Running Tests in Docker
 
 ```bash
-#!/bin/bash
-# run_all_tests.sh
+# Run tests for a specific service
+docker exec shopzy-product-service pytest tests/ -v
 
-echo "Running all service tests..."
+# Run all tests with coverage
+docker exec shopzy-product-service pytest tests/ --cov=app
 
-for service in services/*/; do
-    if [ -d "$service/tests" ]; then
-        echo "Testing $(basename $service)..."
-        cd "$service"
-        pytest tests/ -v
-        cd - > /dev/null
-    fi
-done
-
-echo "All tests completed!"
-```
-
-Run the script:
-```bash
-chmod +x run_all_tests.sh
-./run_all_tests.sh
+# Run specific test
+docker exec shopzy-product-service pytest tests/test_api.py::TestProductAPI::test_create_product -v
 ```
 
 ### Test Database
 
-Tests use SQLite in-memory databases for isolation:
+Tests use SQLite in-memory databases for isolation and speed:
 
 ```python
 # conftest.py automatically creates and destroys test databases
 # No external database needed for testing
+# Each test runs in isolation with a fresh database
 ```
 
 ---
@@ -660,14 +717,14 @@ python -m uvicorn app.main:app --port 8010
 #### 2. Database Connection Error
 
 ```bash
-# Check if service can connect
-curl http://localhost:8001/health
-
-# Check environment variables
-echo $DATABASE_URL
-
-# Verify database exists (if using PostgreSQL)
+# Check if PostgreSQL is running
 psql -U shopzy -h localhost -c "SELECT 1"
+
+# Or check with Docker
+docker ps | grep postgres
+
+# Check PostgreSQL logs
+docker logs shopzy-postgres
 ```
 
 #### 3. Virtual Environment Issues
@@ -689,16 +746,34 @@ npm install
 npm run dev
 ```
 
-#### 5. API Gateway Not Routing Correctly
+#### 5. Docker Container Won't Start
 
 ```bash
-# Test direct service access
-curl http://localhost:8001/health
+# Check logs
+docker-compose logs <service-name>
 
-# Test through gateway
-curl http://localhost:8000/health
+# Rebuild the image
+docker-compose build <service-name>
 
-# Check if service URLs are correct in API Gateway config
+# Restart
+docker-compose up <service-name>
+```
+
+#### 6. Database Container Issues
+
+```bash
+# Check if container is running
+docker ps | grep postgres
+
+# Check logs
+docker logs shopzy-postgres
+
+# Restart PostgreSQL
+docker-compose restart postgres
+
+# Or remove and recreate
+docker-compose down -v
+docker-compose up postgres
 ```
 
 ### Debugging Tips
@@ -747,29 +822,24 @@ console.error("Error:", error)
 #### Slow API Responses
 
 ```bash
-# Check service logs for errors
+# Check service logs
+docker-compose logs -f product-service
+
 # Monitor database queries
-# Use curl with timing
+# Or use timing tools
 curl -w "@-" -o /dev/null -s \
   "http://localhost:8001/products" << 'EOF'
-    time_namelookup:  %{time_namelookup}\n
-    time_connect:     %{time_connect}\n
-    time_appconnect:  %{time_appconnect}\n
-    time_pretransfer: %{time_pretransfer}\n
-    time_redirect:    %{time_redirect}\n
-    time_starttransfer: %{time_starttransfer}\n
-    ------\n
-    time_total:       %{time_total}\n
+    time_total: %{time_total}\n
 EOF
 ```
 
 #### Memory Usage
 
 ```bash
-# Monitor Python service memory
-watch -n 1 'ps aux | grep python'
+# Monitor containers
+docker stats
 
-# Use memory profiler
+# Or on local Python
 pip install memory-profiler
 python -m memory_profiler services/product-service/app/main.py
 ```
@@ -782,19 +852,20 @@ python -m memory_profiler services/product-service/app/main.py
 
 ```bash
 # Common for all services
-DATABASE_URL=sqlite:///./test.db          # For testing
-SERVICE_PORT=8001                         # Service port
+DATABASE_URL=postgresql://shopzy:shopzy123@localhost:5432/service_db
+SERVICE_PORT=8001
 
 # Optional
-DEBUG=True                                # Enable debug mode
-LOG_LEVEL=INFO                           # Logging level
+DEBUG=True
+LOG_LEVEL=INFO
 ```
 
 ### Frontend
 
 ```bash
 # .env.local
-VITE_API_URL=http://localhost:8000       # API Gateway URL
+VITE_API_URL=http://localhost:8000
+NODE_ENV=development
 ```
 
 ---
@@ -803,23 +874,33 @@ VITE_API_URL=http://localhost:8000       # API Gateway URL
 
 ### Quick Commands Reference
 
+**Docker Compose (Recommended):**
 ```bash
-# Run complete application (in different terminals)
-Terminal 1: cd services/product-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8001 --reload
+docker-compose up --build              # Start everything
+docker-compose down                    # Stop everything
+docker-compose logs -f                 # View logs
+docker-compose restart <service>       # Restart service
+```
 
-Terminal 2: cd services/customer-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8002 --reload
+**Individual Services:**
+```bash
+cd services/product-service
+source venv/bin/activate
+export DATABASE_URL="postgresql://shopzy:shopzy123@localhost:5432/product_db"
+python -m uvicorn app.main:app --port 8001 --reload
+```
 
-Terminal 3: cd services/inventory-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8003 --reload
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Terminal 4: cd services/order-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8004 --reload
-
-Terminal 5: cd services/payment-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8005 --reload
-
-Terminal 6: cd services/notification-service && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8006 --reload
-
-Terminal 7: cd services/api-gateway && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python -m uvicorn app.main:app --port 8000 --reload
-
-Terminal 8: cd frontend && npm install && npm run dev
+**Testing:**
+```bash
+cd services/product-service
+pytest tests/ -v
 ```
 
 ### Service Ports
@@ -834,9 +915,17 @@ Terminal 8: cd frontend && npm install && npm run dev
 | Payment Service | 8005 | Payment handling |
 | Notification Service | 8006 | Notifications |
 | Frontend | 5173 | React application |
+| PostgreSQL | 5432 | Database |
+
+### Recommended Workflow
+
+1. **For complete application:** Use `docker-compose up --build`
+2. **For individual service development:** Run service locally with its own terminal
+3. **For frontend development:** Run `npm run dev` in frontend directory
+4. **For testing:** Run `pytest tests/ -v` in service directory
 
 ---
 
 **Last Updated**: August 29, 2026
 
-For more information, see README.md for project overview and architecture details.
+For more information, see README.md for project overview and DOCKER_SETUP.md for Docker details.
