@@ -1,29 +1,24 @@
-version: "3.8"
+version: '3.8'
 
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: shopzy-postgres
-    restart: always
     environment:
-      POSTGRES_USER: shopzy
-      POSTGRES_PASSWORD: shopzy123
-      POSTGRES_DB: shopzy
-
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "-c max_connections=200"
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
-
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shopzy -d shopzy"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
     networks:
       - shopzy-network
 
@@ -43,7 +38,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
   # Product Service
   product-service:
@@ -54,7 +49,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/product_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/product_db
       SERVICE_PORT: 8001
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -62,7 +57,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 
   # Customer Service
   customer-service:
@@ -73,7 +68,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/customer_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/customer_db
       SERVICE_PORT: 8002
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -81,7 +76,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8002 --reload
 
   # Inventory Service
   inventory-service:
@@ -92,7 +87,7 @@ services:
     ports:
       - "8003:8003"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/inventory_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/inventory_db
       SERVICE_PORT: 8003
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -100,7 +95,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8003 --reload
 
   # Order Service
   order-service:
@@ -111,7 +106,7 @@ services:
     ports:
       - "8004:8004"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/order_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/order_db
       SERVICE_PORT: 8004
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -119,7 +114,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8004 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
 
   # Payment Service
   payment-service:
@@ -130,7 +125,7 @@ services:
     ports:
       - "8005:8005"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/payment_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/payment_db
       SERVICE_PORT: 8005
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -138,7 +133,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8005 --reload
 
   # Notification Service
   notification-service:
@@ -149,7 +144,7 @@ services:
     ports:
       - "8006:8006"
     environment:
-      DATABASE_URL: postgresql://shopzy:shopzy123@postgres:5432/notification_db
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/notification_db
       SERVICE_PORT: 8006
       PYTHONUNBUFFERED: 1
     depends_on:
@@ -157,7 +152,7 @@ services:
         condition: service_healthy
     networks:
       - shopzy-network
-    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+    command: python -m uvicorn app.main:app --host 127.0.0.1 --port 8006 --reload
 
   # Frontend
   frontend:
