@@ -30,6 +30,7 @@ env/
 .venv
 env.bak/
 venv.bak/
+.README.md
 
 # IDE
 .vscode/
@@ -126,3 +127,17 @@ tmp/
 # Lock files (optional - uncomment if you want to version them)
 # package-lock.json
 # yarn.lock
+
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
