@@ -1,3 +1,7 @@
+
+# Define variables for VPC module : name, vpc_cidr, availability_zones, 
+# public_subnet_cidrs, private_app_subnet_cidrs, private_db_subnet_cidrs, tags
+
 variable "name" {
     description = "base name for network resources"
     type = string

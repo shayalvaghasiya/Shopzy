@@ -1,3 +1,4 @@
+# VPC module having internet gateway, public and private app and db subnets, public and private route tables and associations
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
