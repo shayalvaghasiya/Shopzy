@@ -3,7 +3,7 @@
 resource "aws_security_group" "this" {
   name        = "${var.name_prefix}-alb-sg"
   description = "Allow public web traffic to the ALB"
-  vpc_id      = aws_vpc.this.id
+  vpc_id      = var.vpc_id
 
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-alb-sg"
@@ -13,7 +13,7 @@ resource "aws_security_group" "this" {
 resource "aws_security_group" "api_gateway" {
     name = "${var.name_prefix}-api-gateway-sg"
     description = "Allow traffic from the ALB to the API gateway"
-    vpc_id = aws_vpc.this.id
+    vpc_id = var.vpc_id
 
     tags = merge(var.tags, {
         Name = "${var.name_prefix}-api-gateway-sg"
@@ -23,7 +23,7 @@ resource "aws_security_group" "api_gateway" {
 resource "aws_security_group" "services" {
     name = "${var.name_prefix}-services-sg"
     description = "Allow internal traffic between backend services"
-    vpc_id = aws_vpc.this.id
+    vpc_id = var.vpc_id
 
     tags = merge(var.tags, {
         Name = "${var.name_prefix}-services-sg"
@@ -33,7 +33,7 @@ resource "aws_security_group" "services" {
 resource "aws_security_group" "rds" {
     name = "${var.name_prefix}-rds-sg"
     description = "Allow traffic from backend services to postgres RDS"
-    vpc_id = aws_vpc.this.id
+    vpc_id = var.vpc_id
 
     tags = merge(var.tags, {
         Name = "${var.name_prefix}-rds-sg"
@@ -43,7 +43,7 @@ resource "aws_security_group" "rds" {
 resource "aws_security_group" "vpc_endpoints" {
     name = "${var.name_prefix}-vpc-endpoints-sg"
     description = "Allow traffic from backend services to VPC endpoints"
-    vpc_id = aws_vpc.this.id
+    vpc_id = var.vpc_id
 
     tags = merge(var.tags, {
         Name = "${var.name_prefix}-vpc-endpoints-sg"
