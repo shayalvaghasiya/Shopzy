@@ -19,3 +19,7 @@ output "security_group_ids" {
     rds           = module.security_groups.rds_security_group_id
   }
 }
+
+output "vpc_endpoint_ids" {
+  value = module.vpc_endpoints.interface_endpoint_ids
+}

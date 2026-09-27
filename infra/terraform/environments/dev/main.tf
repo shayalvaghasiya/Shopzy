@@ -24,3 +24,19 @@ module "security_groups" {
     Environment = var.environment
   }
 }
+
+module "vpc_endpoints" {
+  source = "../../modules/vpc-endpoints"
+
+  name_prefix = "${var.project_name}-${var.environment}"
+  aws_region  = var.aws_region
+  vpc_id      = module.vpc.vpc_id
+
+  private_app_subnet_ids      = module.vpc.private_app_subnet_ids
+  private_app_route_table_ids = module.vpc.private_app_route_table_ids
+  endpoint_security_group_id  = module.security_groups.vpc_endpoints_security_group_id
+
+  tags = {
+    Environment = var.environment
+  }
+}
